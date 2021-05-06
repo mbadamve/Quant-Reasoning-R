@@ -1,1 +1,2 @@
-# Quant-Reasoning-R
+# Statistical Analysis of U.S Vaccination data using R
+
