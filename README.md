@@ -12,4 +12,4 @@ There are four files in this folder.
 - RMarkdown alias .rmd file for running the code, it includes all the statistical data analysis process
 - .rdata for loading data into the RStudio Workspace
 - .html file created from .rmd file with all the plots in a webpage format
-- 
+- .pdf file with the inferential analysis report on the Vaccination data
