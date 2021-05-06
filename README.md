@@ -7,3 +7,6 @@ Shiny,
 Knitr.
 
 More information can be found in https://cran.r-project.org/
+
+There are four files in this folder. 
+- RMarkdown alias .rmd file for running the code.
