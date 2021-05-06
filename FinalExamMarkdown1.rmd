@@ -1,0 +1,318 @@
+---
+title: 'Final Exam Markdown: Group 1'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+```
+
+The fall 2020 IST722 final exam has two parts: a statistical analysis you develop in class
+and a report that you write on your own time. The first part, which you are working on
+right now, involves using this Markdown file to produce all of the diagnostics, graphs, and
+statistical output you will need for your report.
+
+The **Knit** button at the top of the code window will generate an html file that
+includes both content as well as the output of any embedded R code chunks within this 
+document. When you open this html file in a browser, you will be able to save it as
+a pdf file for submission to Blackboard. The file you submit to Blackboard must contain
+all of the output that you will use in your report. Any questions you answer with results
+or graphics not appearing in your PDF will not receive credit.
+
+This initial code block opens the file and produces basic diagnostics. Make sure you have
+set the working directory and the file name correctly.
+
+```{r open}
+# First, set the working directory to wherever you have stored your data file.
+# setwd("~/Downloads")
+# Already stored the markdown file in the same directory. So, I won't be setting the 
+# working directory
+
+# In this block, modify the file name of the Rdata file to match the name of
+# the file you downloaded from Blackboard. Change the 1 to whatever number you have
+load("datasets15.RData")
+
+# If you can't get that to work, comment out the previous line and try file.choose() to select 
+# your data file using a file selection dialog:
+# 
+# load(file.choose())
+
+# Now make sure that the two datasets you will be using are available.
+str(usVaccines)
+dim(usVaccines)
+str(districts)
+dim(districts)
+
+```
+
+
+
+
+## Plotting the Time Series Data
+
+A basic time series plot can be valuable for examining trends,
+periodicity, and other aspects of a time series. You don't necessarily need to include
+this plot in your report, particularly because you only care about vaccination levels
+in the most recent few years.
+
+```{r tsplot, echo=TRUE}
+
+plot(usVaccines)
+
+# Key to abbreviations (from WHO)
+# DTP - Diptheria, Tetanus, Pertussis
+# HepB_BD - Hepatitis B, Birth Dose
+# Pol3 - Inactivated polio vaccine
+# Hib3 - Haemophilus influenza type B vaccine
+# MCV - Measles-containing-vaccine first-dose
+
+```
+
+
+## Time Series Autocorrelation
+
+One of the most basic diagnostics for time series is an autocorrelation plot. One of
+the exam questions asks you to interpret these plots. You need not modify this block 
+of code, as it produces all five of the plots you need.
+
+
+```{r TSacf, echo=TRUE}
+
+# This runs an ACF on each of the five time series 
+for (i in 1:5) {
+  acf(usVaccines[,i], main=attr(usVaccines,"dimnames")[[2]][i])
+}
+
+for (i in 1:5) {
+  plot(decompose(ts(usVaccines[, i], frequency = 2)))
+}
+
+```
+
+## Time Series Changepoint Analysis of Means
+
+This code calculates a changepoint analysis of means that is designed to
+find the last mean changepoint within each of the five series. As long as you have
+the changepoint package installed, there should be no need to modify this code.
+
+```{r TScpt, echo=TRUE}
+library(changepoint)
+
+# This finds the final mean changepoint for each time series
+print("Last mean changepoint for each time series:")
+for (i in 1:5) {
+  print(attr(usVaccines,"dimnames")[[2]][i])
+  print(changepoint::cpt.mean(rev(usVaccines[,i]), method="AMOC")@cpts[1])
+}
+
+```
+
+
+## Time Series Subsetting
+
+You will be calibrating your district-by-district vaccine results by comparing to
+the U.S. mean level of vaccination during recent years. Subset the time series data 
+to only include the most recent years during which all vaccine mean levels were 
+stable. Use the changepoint output from the previous step to make this judgment call. 
+Set the value of startPoint to the most appropriate starting point within the 38 year
+period of the time series data. Then calculate the mean level for each vaccination 
+during that time period. 
+
+Optionally add a bar plot that puts all of the mean vaccination levels into the same graphic.
+
+```{r TSsubset, echo=TRUE}
+
+startPoint <- 14 # Change the starting point for calculating a mean of recent observations only.
+# Choose the most reasonable value by looking at the results of the previous code block.
+
+# Now calculate the mean vaccination level during recent years for
+# each type of vaccine. 
+mean_vacc <- apply(usVaccines[startPoint:38,], MARGIN=2, FUN=mean)
+
+# Optionally add a barplot() to display these means.
+barplot(mean_vacc)
+
+```
+
+That's the end of the analysis of the usVaccines data. Next, you will conduct diagnostics
+on your main dataset, the district by district results for a random sample of n=700 California
+school districts. Refer to the exam specification for information on the meaning of
+each variable in your data set.
+
+## Descriptive Statistics for Later Use
+
+Clients expect basic descriptive statistics on the major variables of importance. Descriptives
+may also be important in guiding your analyses. The code
+below produces a summary of the data set, but you may also want to compute some 
+other statistics that do not appear in the output of summary().
+
+```{r descriptives, echo=TRUE}
+
+summary(districts)
+# Add any additional descriptive statistics that you want to view now or later.
+
+# This produces a complete correlation matrix, rounded to two decimal digits
+round(cor(districts[,-1]),2)
+round(cor(districts[,2:5]),2)
+colMeans(districts[2:5])
+aggregate(districts[,2:5],by=list(districts$DistrictName), mean)
+mean(districts$PctUpToDate)
+```
+
+
+## Plotting Histograms as Diagnostics
+
+Most reports that you create for clients will NOT benefit from including histograms
+because histograms are very low level and rarely communicate much of interest.
+Nonetheless, you should look at them yourself to make sure you understand your data.
+Add any additional histograms that you wish to view.
+
+```{r histograms, echo=TRUE}
+
+hist(districts$TotalSchools)
+# Add any additional histograms that you want to view now or later.
+hist(districts$PctUpToDate)
+hist(districts$WithoutDTP)
+hist(districts$WithoutPolio)
+hist(districts$WithoutMMR)
+hist(districts$WithoutHepB)
+hist(districts$PctBeliefExempt) # 2
+hist(districts$PctChildPoverty)
+hist(districts$PctFamilyPoverty)
+hist(districts$Enrolled) # 3
+
+```
+
+
+## Transforming Variables Prior to Inferential Analysis
+
+Based on the histograms you created above, you may want to make some transformations to
+your numeric variables to reshape their respective distributions. Remember to
+add new variables to your dataset, rather than overwriting existing variables.
+
+```{r transformations, echo=TRUE}
+
+# Here's an example: The total number of schools in each district is generally small
+# but there are a few large districts. Try a log() transformation to address this.
+districts$logTotSchools <- log(districts$TotalSchools)
+hist(districts$logTotSchools)
+
+# Add any additional transformations that you want to compute and store on your data set.
+# Generally speaking, you should inspect the results of each transformation with a histogram
+# or some descriptive statistics.
+
+districts$logPctBeliefExempt <- log(districts$PctBeliefExempt)
+hist(districts$logPctBeliefExempt)
+
+districts$logEnrolled <- log(districts$Enrolled)
+hist(districts$logEnrolled)
+
+```
+
+## Inferential Analyses
+
+One very important aspect of doing this final exam is that you need to anticipate what kinds of
+analytical results will go into your report. Now is a good time to reexamine the
+exam specification to make sure that you know what analyses you will need in order to 
+complete your report. For example, the following code produces results for a
+t-test which you may or may not need. Subsequent code blocks create linear regression
+and logistic regression results. Add any additional t-tests that you think you may need 
+in this block of code.
+
+```{r ttests, echo=TRUE}
+library(BayesFactor)
+
+# These t-tests compare the mean number of schools per district for those
+# districts that completed reporting versus those that did not.
+t.test(TotalSchools ~ DistrictComplete, data=districts)
+ttestBF(formula=TotalSchools ~ DistrictComplete, data=districts, posterior=FALSE)
+summary(ttestBF(formula=TotalSchools ~ DistrictComplete, data=districts, posterior=TRUE, iterations=10000))
+# Add any additional t-tests that you wish to compute.
+
+
+```
+
+```{r}
+summary(lm(PctUpToDate ~ WithoutDTP+WithoutMMR+WithoutHepB+WithoutPolio+PctBeliefExempt, data=districts))
+```
+
+The code below produces a linear regression - a one predictor model that predicts
+the percentage of students who are up to date based on the total student enrollment.
+This code produces a frequentist result, a Bayes Factor, and a Bayesian estimation
+result. Add any additional regressions you would like to compute by copying the code
+and adding new/different predictors.
+
+```{r regressions, echo=TRUE}
+library(BayesFactor)
+
+
+# These regressions predict the percentage of students who are up to date on vaccines
+# using the number of students enrolled in the district.
+summary(lm(PctBeliefExempt ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts))
+summary(lmBF(PctBeliefExempt ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts, posterior=FALSE))
+summary(lmBF(PctBeliefExempt ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts, posterior=TRUE, iterations=10000))
+# Add any additional regression analyses that you wish to compute
+```
+
+
+```{r regressions1, echo=TRUE}
+summary(lm(PctUpToDate ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts))
+summary(lmBF(PctUpToDate ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data= districts, posterior=FALSE))
+summary(lmBF(PctUpToDate ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts, posterior=TRUE, iterations=10000))
+```
+
+```{r}
+summary(lm(PctUpToDate ~ PctChildPoverty*Enrolled, data = districts))
+summary(lm(PctUpToDate ~ PctChildPoverty+Enrolled, data = districts))
+summary(lmBF(PctUpToDate ~ PctChildPoverty*Enrolled, data=districts, posterior=FALSE))
+summary(lmBF(PctUpToDate ~ PctChildPoverty+Enrolled, data=districts, posterior=FALSE))
+```
+
+
+```{r regressions2, echo=TRUE}
+summary(lmBF(PctUpToDate ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts, posterior=FALSE))
+summary(lmBF(PctUpToDate ~ logEnrolled+PctChildPoverty+PctFamilyPoverty+logTotSchools, data=districts, posterior=TRUE, iterations=10000))
+```
+
+Finally, the code below produces a logistic regression - a one predictor model that predicts
+the percentage of students who are up to date based on the total student enrollment. The
+code produces a frequentist result as well as a Bayesian estimation result.
+Add any additional regressions you would like to compute by copying the code
+and adding new/different predictors.
+
+```{r logistic, echo=TRUE}
+
+library(MCMCpack)
+
+
+# These logistic regressions predict whether a district's reporting is complete
+# based on the percentage of students who did not get the DTP vaccine. 
+glmOut <- glm(DistrictComplete ~ PctFamilyPoverty+logEnrolled+ logTotSchools , family = binomial(), data=districts)
+summary(glmOut)
+exp(coef(glmOut))
+exp(confint(glmOut))
+glmBayesOut <- MCMCpack::MCMClogit(DistrictComplete ~ PctFamilyPoverty+logEnrolled+ logTotSchools , data=districts)
+summary(glmBayesOut)
+summary(exp(glmBayesOut))
+# Add any additional logistic regression analyses that you wish to compute
+
+glmOut <- glm(DistrictComplete ~ logEnrolled+ logTotSchools , family = binomial(), data=districts)
+summary(glmOut)
+exp(coef(glmOut))
+exp(confint(glmOut))
+glmBayesOut <- MCMCpack::MCMClogit(DistrictComplete ~ logEnrolled+ logTotSchools, data=districts)
+summary(glmBayesOut)
+summary(exp(glmBayesOut))
+```
+
+
+## Knit, PDF, and Submit to Blackboard
+
+Click the **Knit** button to create and inspect your html document. If the knitting process 
+is successful an html file will be submitted to your current working directory. 
+The file will also pop up in a viewer. There is a button on the viewer that says "Open in
+Browser." Click this and then save a PDF version of your page from your browser. Submit
+the PDF version to Blackboard (Week 13 Content).
